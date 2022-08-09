@@ -1,6 +1,6 @@
 # pylint: disable=invalid-name
 """Continuous-time models for mechanical subsystems."""
-
+import numpy as np
 
 # %%
 class Mechanics:
@@ -45,8 +45,12 @@ class Mechanics:
             Time derivative of the state vector.
 
         """
-        dw_M = (tau_M - self.B*w_M - self.tau_L_ext(t))/self.J
-        dtheta_M = w_M
+        if t > 3.5:
+            dw_M = tau_M - self.tau_L_ext(t) + 500*np.cos(2*np.pi* 1000*t)#+ vib_mag*np.cos(2*np.pi* f_vib*t)
+            dtheta_M = 314.15926+ 10*np.sin(2*np.pi* 10*t)#+ vib_mag*np.sin(2*np.pi* f_vib*t)
+        else:
+            dw_M = (tau_M - self.B*w_M - self.tau_L_ext(t))/self.J
+            dtheta_M = w_M
         return [dw_M, dtheta_M]
 
     def meas_speed(self):

@@ -55,8 +55,8 @@ def plot(sim, t_span=None, base=None):
     except AttributeError:
         motor_type = 'sm'
 
-    fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8, 10))
-
+    fig, (ax1, ax2, ax3, ax4, ax5) = plt.subplots(5, 1, figsize=(8, 10), sharex = True)
+    
     # Subplot 1: angular speeds
     ax1.step(ctrl.t, ctrl.w_m_ref/base.w, '--', where='post')
     ax1.plot(mdl.t, mdl.w_m/base.w)
@@ -69,8 +69,8 @@ def plot(sim, t_span=None, base=None):
         r'$\omega_\mathrm{m}$',
         r'$\hat \omega_\mathrm{m}$',
     ])
-    ax1.set_xlim(t_span)
-    ax1.set_xticklabels([])
+    # ax1.set_xlim(t_span)
+    # ax1.set_xticklabels([])
 
     # Subplot 2: torques
     ax2.plot(mdl.t, mdl.tau_L/base.tau, '--')
@@ -84,8 +84,8 @@ def plot(sim, t_span=None, base=None):
         r'$\tau_\mathrm{M}$',
         r'$\tau_\mathrm{M,ref}$',
     ])
-    ax2.set_xlim(t_span)
-    ax2.set_xticklabels([])
+    # ax2.set_xlim(t_span)
+    # ax2.set_xticklabels([])
 
     # Subplot 3: currents
     ax3.step(ctrl.t, ctrl.i_s.real/base.i, where='post')
@@ -101,15 +101,15 @@ def plot(sim, t_span=None, base=None):
         r'$i_\mathrm{sd,ref}$',
         r'$i_\mathrm{sq,ref}$',
     ])
-    ax3.set_xlim(t_span)
-    ax3.set_xticklabels([])
+    # ax3.set_xlim(t_span)
+    # ax3.set_xticklabels([])
 
     # Subplot 4: voltages
     ax4.step(ctrl.t, np.abs(ctrl.u_s)/base.u, where='post')
     ax4.step(ctrl.t, ctrl.u_dc/np.sqrt(3)/base.u, '--', where='post')
     ax4.legend([r'$u_\mathrm{s}$', r'$u_\mathrm{dc}/\sqrt{3}$'])
-    ax4.set_xlim(t_span)
-    ax4.set_xticklabels([])
+    # ax4.set_xlim(t_span)
+    # ax4.set_xticklabels([])
 
     # Subplot 5: flux linkages
     if motor_type == 'sm':
@@ -131,7 +131,7 @@ def plot(sim, t_span=None, base=None):
             r'$\psi_\mathrm{R}$',
             r'$\hat \psi_\mathrm{s}$',
         ])
-    ax5.set_xlim(t_span)
+    # ax5.set_xlim(t_span)
 
     # Add axis labels
     if pu_vals:
