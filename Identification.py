@@ -38,11 +38,18 @@ class model_params:
     beta: float = .84
     s: int = 7
     u_cons: float = 540
+
+    # signal injected
+    mag_vib: float = 1
+    f_vib: float = 300
+    t_vib: float = 3.5
+
+
     def __post_init__(self):
         self.base = helpers.BaseValues(self.U_nom, self.I_nom, self.f_nom,
                                         self.P_nom, self.tau_nom, self.p)
         if self.ideal_mech:
-            self.mech = ideal_mech.Mechanics(self.j, self.b)
+            self.mech = ideal_mech.Mechanics(self.j, self.b, self.mag_vib, self.f_vib, self.t_vib)
         else:
             self.mech = mech.Mechanics(self.j, self.b)
 

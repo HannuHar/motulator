@@ -20,9 +20,10 @@ class Mechanics:
 
     """
 
-    def __init__(self, J=.015, B=0, tau_L_ext=lambda t: 0):
+    def __init__(self, J=.015, B=0, mag_vib=0, f_vib=0, t_vib=np.Infinity, tau_L_ext=lambda t: 0):
         self.J, self.B = J, B
         self.tau_L_ext = tau_L_ext
+        self.mag_vib, self.f_vib, self.t_vib = mag_vib, f_vib, t_vib
         # Initial values
         self.w_M0, self.theta_M0 = 0, 0
 
@@ -45,9 +46,10 @@ class Mechanics:
             Time derivative of the state vector.
 
         """
-        if t > 3.5:
-            dw_M = tau_M - self.tau_L_ext(t) + 500*np.cos(2*np.pi* 1000*t)#+ vib_mag*np.cos(2*np.pi* f_vib*t)
-            dtheta_M = 314.15926+ 10*np.sin(2*np.pi* 10*t)#+ vib_mag*np.sin(2*np.pi* f_vib*t)
+        if t > self.t_vib:
+            dw_M = (tau_M - self.tau_L_ext(t) + 
+                    self.mag_vib*2*np.pi* self.f_vib*np.cos(2*np.pi* self.f_vib*t))
+            dtheta_M = w_M + self.mag_vib*np.sin(2*np.pi* self.f_vib*t)
         else:
             dw_M = (tau_M - self.B*w_M - self.tau_L_ext(t))/self.J
             dtheta_M = w_M
