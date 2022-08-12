@@ -5,6 +5,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 import numpy as np
+import scipy.fft as fft
+import matplotlib.pyplot as plt
 
 
 # %%
@@ -257,3 +259,42 @@ class Bunch(dict):
         # Overriding __setstate__ to be a noop has the effect of
         # ignoring the pickled __dict__
         pass
+
+def find_nearest(array, value):
+
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+
+    return idx
+
+def fft_from_data(t: np.ndarray, data: np.ndarray):
+
+    yf = fft.fftshift(fft.fft(data))*(t[1]-t[0])
+    xf = fft.fftshift(fft.fftfreq(t.size, t[1]-t[0]))
+    
+    # plt.subplot(2,1,2)
+    # plt.scatter(xf,(np.abs(yf/t.size)*2))
+    # plt.grid(True)
+    # plt.subplot(2, 1, 1)
+    # plt.plot(t, data)
+    # plt.grid(True)
+    # plt.show()
+    return xf, yf
+
+def torq_W_diff(t: np.ndarray, tau_M: np.ndarray, w_M: np.ndarray, start: float, f_base: float):
+    time = np.delete(np.delete(t, np.where(start + 7/f_base <= t)),
+                    np.where(t <= start))
+
+    torq = np.delete(np.delete(tau_M, np.where(start + 7/f_base <= t)), 
+                    np.where(t <= start))
+
+    w =   np.delete(np.delete(w_M, np.where(start + 7/f_base <= t)), 
+                    np.where(t <= start))
+  
+    xf, tau_yf = fft_from_data(time, torq)
+    _, w_yf = fft_from_data(time, w) 
+    # res = np.abs(tau_yf/w_yf)
+    # pha_shift = np.angle(tau_yf/(-1*w_yf), deg=True)
+    idx = find_nearest(xf,f_base)
+    # print("freq: ", xf[idx], ", tau: ", tau_yf[idx], " w: ", w_yf[idx])
+    return xf[idx], tau_yf[idx], w_yf[idx]

@@ -117,7 +117,7 @@ class InductionMotorVHzCtrl(Ctrl):
         i_s = np.exp(-1j*self.theta_s)*abc2complex(i_s_abc)
 
         # Slip compensation
-        w_s_ref = w_m_ref + self.w_r_ref
+        w_s_ref = w_m_ref #+ self.w_r_ref
 
         # Dynamic stator frequency and slip frequency
         w_s, w_r = self.stator_freq(w_s_ref, i_s)

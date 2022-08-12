@@ -1,2 +1,6 @@
 *.pyc
 .vscode
+motulator/control/obs_vhz.py
+.ipynb_checkpoints
+Untitled.ipynb
+*.mat
