@@ -222,10 +222,11 @@ def ident(i,x):
     del sim
     gc.collect()
     # print("inx: ",i," f: ",f," tau_M: ",tau_yf," w_M: ",w_yf)
+    # print("\nfreq given:", x, "\nfreq res:", f, "\ntau_M", tau_yf, "\nw_M", w_yf)
     return [i,f,tau_yf,w_yf]
 
 def multi():
-    freq = np.logspace(1,2.7,16)
+    freq = np.logspace(-0.8,2.7,150)
     global res
     pool = mp.Pool(mp.cpu_count())
     t_start = time()
@@ -264,7 +265,7 @@ def multi():
 if __name__ == "__main__":
     res =[]
     multi()
-    # ident(1,0.5)
+    # ident(1,386.0705432153815)
 
     
 
