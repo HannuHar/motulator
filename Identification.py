@@ -113,22 +113,22 @@ def collect_result(result):
         global res
         res.append(result)
 
-def obs_vhz(mag_vib=1,f_vib=1,t_vib=np.infty):
+def obs_vhz(mag_vib=0.1,f_vib=1,t_vib=np.infty):
     # https://doi.org/10.1109/JESTPE.2021.3060583
     # Model
-    pars = model_pars_2_2(mag_vib=mag_vib, f_vib=f_vib, t_vib=t_vib)
+    pars = model_pars(mag_vib=mag_vib, f_vib=f_vib, t_vib=t_vib)
     mdl = pars.mdl
     base = pars.base
     
     # Control
     ctrl = obs_control.ObserverBasedVHz(
-                obs_control.IMObsVHzPars(i_s_max=base.i*1.5,
+                obs_control.IMObsVHzPars(T_s=25e-6,i_s_max=base.i*1.5,
                                          psi_s_ref=base.psi,
                                          alpha_c=2*np.pi*20,
                                          alpha_o=2*np.pi*40,
                                          zeta_inf=0.7,
                                          alpha_f=2*np.pi*1,
-                                         k_w=3,
+                                         k_w=0.5,
                                          R_s=pars.R_s,
                                          R_R=pars.R_R,
                                          L_sgm=pars.L_sig,
@@ -142,22 +142,21 @@ def obs_vhz(mag_vib=1,f_vib=1,t_vib=np.infty):
     sim = simulation.Simulation(mdl, ctrl, 1, False)
     
     # Actual simulation
-    t_start = time()
-    sim.simulate(t_stop=10)
-    print('\nExecution time: {:.2f} s'.format((time() - t_start)))
-    return sim
-    # plot.plot(sim)
+    sim.simulate(t_stop=7 + 10/f_vib)
+    plot.plot(sim)
+    # return sim
 
-def closed_loop(mag_vib=1,f_vib=1,t_vib=np.infty):
+def closed_loop(mag_vib=0.05,f_vib=1,t_vib=np.infty):
     # https://doi.org/10.1109/JESTPE.2021.3060583
     # Model
-    pars = model_pars()
+    start_time = helpers.find_next_zero(t_vib,f_vib)
+    pars = model_pars(mag_vib=mag_vib, f_vib=f_vib, t_vib=start_time)
     mdl = pars.mdl
     base = pars.base
     
     # Control
     ctrl = vhz_control.InductionMotorVHzCtrl(
-    vhz_control.InductionMotorVHzCtrlPars(
+    vhz_control.InductionMotorVHzCtrlPars(  T_s=250e-6,
                                             R_s=pars.R_s,
                                             R_R=pars.R_R,
                                             L_M=pars.L_M,
@@ -174,16 +173,15 @@ def closed_loop(mag_vib=1,f_vib=1,t_vib=np.infty):
     sim = simulation.Simulation(mdl, ctrl, 1, False)
     
     # Actual simulation
-    t_start = time()
-    sim.simulate(t_stop=10)
-    print('\nExecution time: {:.2f} s'.format((time() - t_start)))
-        
-    plot.plot(sim)
+    sim.simulate(t_stop=16 + 10/f_vib)
+    # plot.plot(sim)
+    return sim     
 
-def open_loop(mag_vib=1,f_vib=1,t_vib=np.infty):
+def open_loop(mag_vib=1,f_vib=0.05,t_vib=np.infty):
     # https://doi.org/10.1109/JESTPE.2021.3060583
     # Model
-    pars = model_pars(mag_vib=mag_vib, f_vib=f_vib, t_vib=t_vib)
+    start_time = helpers.find_next_zero(t_vib,f_vib)
+    pars = model_pars(mag_vib=mag_vib, f_vib=f_vib, t_vib=start_time)
     mdl = pars.mdl
     base = pars.base
     
@@ -206,66 +204,64 @@ def open_loop(mag_vib=1,f_vib=1,t_vib=np.infty):
     sim = simulation.Simulation(mdl, ctrl, 1, False)
     
     # Actual simulation
-    # t_start = time()
-    sim.simulate(t_stop=7 + 10/f_vib)
-    # print('\nExecution time: {:.2f} s'.format((time() - t_start)))
+    sim.simulate(t_stop=16 + 10/f_vib)
     # plot.plot(sim)
     return sim   
     
 
-def ident(i,x):
-    sim = open_loop(f_vib=x,t_vib=3.5)
+def ident(i,x,control):
+
+    if control == "closed_loop":
+        sim = closed_loop(f_vib=x,t_vib=12)
+    if control == "open_loop":
+        sim = open_loop(f_vib=x,t_vib=12)
+    elif control == "obs":
+        sim = obs_control(f_vib=x,t_vib=5)
+    
+    # FFT
     f, tau_yf, w_yf =helpers.torq_W_diff(sim.mdl.data.t,
-                                            sim.mdl.data.tau_M,sim.mdl.data.w_M,7,x)
+                                        sim.mdl.data.tau_M,sim.mdl.data.w_M,16,x)
 
-
+    # Clean up for memomry
     del sim
     gc.collect()
-    # print("inx: ",i," f: ",f," tau_M: ",tau_yf," w_M: ",w_yf)
-    # print("\nfreq given:", x, "\nfreq res:", f, "\ntau_M", tau_yf, "\nw_M", w_yf)
+    
     return [i,f,tau_yf,w_yf]
 
-def multi():
-    freq = np.logspace(-0.8,2.7,150)
-    global res
-    pool = mp.Pool(mp.cpu_count())
-    t_start = time()
+def multi(control = "open_loop"):
+    folder = "mat_files/"
+    freq = np.logspace(-1,0,16)
 
+    # freq[0] = 10^(0)
+    # freq[1] = 1.02342
+    global res
+
+    # Multiprocessing
+    pool = mp.Pool(mp.cpu_count())
+    
     for i, x in enumerate(freq):
-        pool.apply_async(ident, args=[i,x], callback=collect_result) 
+        pool.apply_async(ident, args=[i,x,control], callback=collect_result) 
     
     pool.close()
     pool.join()
-
-    print('\nExecution time: {:.2f} s'.format((time() - t_start)))
-    res.sort(key=lambda x: x[0])
     
+    # Sort the data
+    res.sort(key=lambda x: x[0])
     f = [fre for i, fre, tau_M, w_M in res]
     tau_M = [tau_M for i, fre, tau_M, w_M in res]
     w_M = [w_M for i, fre, tau_M, w_M in res]
+    
+    # Save data
     mdic = {"f":f,"tau_M":tau_M,"w_M":w_M}
-    # print(mdic)
-    io.savemat("open_loop.mat", mdic)
-    
-
-    # plt.subplot(2,1,1)
-    # plt.plot(f, np.abs(resp), marker='x')
-    # plt.semilogx()
-    # plt.grid(True)
-
-    # plt.subplot(2,1,2)
-    # plt.plot(f, np.angle(resp), marker="x")
-    # plt.semilogx()
-    # plt.grid(True)
-
-    # plt.show()
-    
-
+    io.savemat(folder + control + "_" + str(freq.size) + "_samples_" + 
+                str('%.2E' % freq[0]).replace(".","_") + "_to_" + str('%.2E' % freq[-1]).replace(".","_")  + "_Hz" +".mat", mdic)
     
 if __name__ == "__main__":
+    t_start = time()
     res =[]
     multi()
-    # ident(1,386.0705432153815)
+    # ident(1,10**(1),"open_loop")
+    print('\nExecution time: {:.2f} s'.format((time() - t_start)))
 
     
 

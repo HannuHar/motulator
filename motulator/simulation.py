@@ -254,7 +254,7 @@ class Simulation:
 
                     # Integrate over t_span
                     t_span = (self.mdl.t0, self.mdl.t0 + t_step)
-                    t_eval = np.linspace(t_span[0], t_span[-1], 10)[1:]
+                    t_eval = np.linspace(t_span[0], t_span[-1], 5)[1:]
                     sol = solve_ivp(self.mdl.f, t_span, x0, max_step=max_step, t_eval=t_eval)
 
                     # Set the new initial values (last points of the solution)

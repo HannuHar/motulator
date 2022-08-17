@@ -298,3 +298,20 @@ def torq_W_diff(t: np.ndarray, tau_M: np.ndarray, w_M: np.ndarray, start: float,
     idx = find_nearest(xf,f_base)
     # print("freq: ", xf[idx], ", tau: ", tau_yf[idx], " w: ", w_yf[idx])
     return xf[idx], tau_yf[idx], w_yf[idx]
+
+def find_next_zero(start,f):
+    
+    def func(t,f):
+        return np.cos(2*np.pi*f*t)
+    juttui = True
+    t1 = start
+    delta = (1/f)/5000
+    while juttui:
+         
+        # print("\nTime:", t1)
+        # print(f(t1,100)*f(t1+delta,100))
+        t1=t1+delta
+        if (func(t1,f)*func(t1+delta,f)<0):
+            t1 = t1+delta/2
+            juttui=False
+            return t1 + np.arccos(0)/(2*np.pi*f)

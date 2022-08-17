@@ -149,7 +149,7 @@ def plot(sim, t_span=None, base=None):
     ax5.set_xlabel('Time (s)')
     fig.align_ylabels()
 
-    plt.tight_layout()
+    # plt.tight_layout()
     plt.show()
 
 
