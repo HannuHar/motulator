@@ -82,7 +82,7 @@ class InductionMotorVHzCtrl(Ctrl):
         self.L_M = pars.L_M
         w_rb = pars.R_R*(pars.L_M + pars.L_sgm)/(pars.L_sgm*pars.L_M)
         self.alpha_f: float = .1*w_rb
-        self.alpha_i: float = .1*w_rb
+        self.alpha_i: float = 2*np.pi*1#.8*w_rb
         # States
         self.i_s_ref = 0j
         self.theta_s = 0

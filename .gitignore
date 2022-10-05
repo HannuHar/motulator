@@ -2,5 +2,7 @@
 .vscode
 motulator/control/obs_vhz.py
 .ipynb_checkpoints
+*.ipynb
 Untitled.ipynb
 mat_files
+figures

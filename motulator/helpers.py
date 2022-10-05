@@ -272,46 +272,37 @@ def fft_from_data(t: np.ndarray, data: np.ndarray):
     yf = fft.fftshift(fft.fft(data))*(t[1]-t[0])
     xf = fft.fftshift(fft.fftfreq(t.size, t[1]-t[0]))
     
-    # plt.subplot(2,1,2)
-    # plt.scatter(xf,(np.abs(yf/t.size)*2))
-    # plt.grid(True)
-    # plt.subplot(2, 1, 1)
-    # plt.plot(t, data)
-    # plt.grid(True)
-    # plt.show()
     return xf, yf
 
 def torq_W_diff(t: np.ndarray, tau_M: np.ndarray, w_M: np.ndarray, start: float, f_base: float):
-    time = np.delete(np.delete(t, np.where(start + 7/f_base <= t)),
+    # Select data points
+    time = np.delete(np.delete(t, np.where(start + 5/f_base <= t)),
                     np.where(t <= start))
-
-    torq = np.delete(np.delete(tau_M, np.where(start + 7/f_base <= t)), 
+    torq = np.delete(np.delete(tau_M, np.where(start + 5/f_base <= t)), 
                     np.where(t <= start))
-
-    w =   np.delete(np.delete(w_M, np.where(start + 7/f_base <= t)), 
+    w =   np.delete(np.delete(w_M, np.where(start + 5/f_base <= t)), 
                     np.where(t <= start))
-  
+    # FFT
     xf, tau_yf = fft_from_data(time, torq)
     _, w_yf = fft_from_data(time, w) 
-    # res = np.abs(tau_yf/w_yf)
-    # pha_shift = np.angle(tau_yf/(-1*w_yf), deg=True)
+    
+    # Find frequency of interest
     idx = find_nearest(xf,f_base)
-    # print("freq: ", xf[idx], ", tau: ", tau_yf[idx], " w: ", w_yf[idx])
+    
+    
     return xf[idx], tau_yf[idx], w_yf[idx]
 
 def find_next_zero(start,f):
     
     def func(t,f):
         return np.cos(2*np.pi*f*t)
-    juttui = True
+    loop_on = True
     t1 = start
     delta = (1/f)/5000
-    while juttui:
-         
-        # print("\nTime:", t1)
-        # print(f(t1,100)*f(t1+delta,100))
+
+    while loop_on:
         t1=t1+delta
         if (func(t1,f)*func(t1+delta,f)<0):
             t1 = t1+delta/2
-            juttui=False
+            loop_on=False
             return t1 + np.arccos(0)/(2*np.pi*f)

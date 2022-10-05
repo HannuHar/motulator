@@ -1,5 +1,4 @@
 # simualtion tools
-from re import M
 import motulator.simulation as simulation
 import motulator.helpers as helpers
 import motulator.plots as plot
@@ -82,8 +81,8 @@ class model_pars_2_2:
 
     R_s: float = 3.7
     R_R: float = 2.1
-    L_sig: float = 0.0021
-    L_M: float = 0.224
+    L_sig: float = 21e-3
+    L_M: float = 224e-3
     p: int = 2
 
     l_unsat: float = .34
@@ -109,26 +108,23 @@ class model_pars_2_2:
         self.conv = converter.Inverter(self.u_cons)
         self.mdl = im_drive.InductionMotorDrive(self.motor, self.mech, self.conv)
 
-def collect_result(result):
-        global res
-        res.append(result)
 
-def obs_vhz(mag_vib=0.1,f_vib=1,t_vib=np.infty):
+def obs_vhz(mag_vib=0.01,f_vib=1,t_vib=np.infty):
     # https://doi.org/10.1109/JESTPE.2021.3060583
     # Model
-    pars = model_pars(mag_vib=mag_vib, f_vib=f_vib, t_vib=t_vib)
+    pars = model_pars_2_2(mag_vib=mag_vib, f_vib=f_vib, t_vib=t_vib)
     mdl = pars.mdl
     base = pars.base
     
     # Control
     ctrl = obs_control.ObserverBasedVHz(
-                obs_control.IMObsVHzPars(T_s=25e-6,i_s_max=base.i*1.5,
+                obs_control.IMObsVHzPars(T_s=250e-6,i_s_max=base.i*3,
                                          psi_s_ref=base.psi,
                                          alpha_c=2*np.pi*20,
                                          alpha_o=2*np.pi*40,
                                          zeta_inf=0.7,
                                          alpha_f=2*np.pi*1,
-                                         k_w=0.5,
+                                         k_w=3,
                                          R_s=pars.R_s,
                                          R_R=pars.R_R,
                                          L_sgm=pars.L_sig,
@@ -136,21 +132,20 @@ def obs_vhz(mag_vib=0.1,f_vib=1,t_vib=np.infty):
     
     # Ramp and speed
     ctrl.w_m_ref = lambda t: (t > .2)*(.8*base.w)
-    mdl.mech.tau_L_ext = lambda t: (t > 2.5)*base.tau_nom*0.8
+    mdl.mech.tau_L_ext = lambda t: (t > 1.5)*base.tau_nom*0.8
     
     # Simulation model
     sim = simulation.Simulation(mdl, ctrl, 1, False)
     
     # Actual simulation
-    sim.simulate(t_stop=7 + 10/f_vib)
-    plot.plot(sim)
-    # return sim
+    sim.simulate(t_stop=t_vib + 20/f_vib)
+    
+    return sim
 
-def closed_loop(mag_vib=0.05,f_vib=1,t_vib=np.infty):
+def closed_loop(mag_vib=0.001,f_vib=1,t_vib=np.infty):
     # https://doi.org/10.1109/JESTPE.2021.3060583
     # Model
-    start_time = helpers.find_next_zero(t_vib,f_vib)
-    pars = model_pars(mag_vib=mag_vib, f_vib=f_vib, t_vib=start_time)
+    pars = model_pars_2_2(mag_vib=mag_vib, f_vib=f_vib, t_vib=t_vib)
     mdl = pars.mdl
     base = pars.base
     
@@ -162,32 +157,32 @@ def closed_loop(mag_vib=0.05,f_vib=1,t_vib=np.infty):
                                             L_M=pars.L_M,
                                             L_sgm=pars.L_sig,
                                             psi_s_nom=base.psi,
-                                            k_u=0.6,
-                                            k_w=4))
+                                            k_u=1,
+                                            k_w=3))
     
     # Ramp and speed
     ctrl.w_m_ref = lambda t: (t > .2)*(.8*base.w)
-    mdl.mech.tau_L_ext = lambda t: (t > 2.5)*base.tau_nom
+    mdl.mech.tau_L_ext = lambda t: (t > 1.5)*base.tau_nom*0.8
     
     # Simulation model
     sim = simulation.Simulation(mdl, ctrl, 1, False)
     
     # Actual simulation
-    sim.simulate(t_stop=16 + 10/f_vib)
-    # plot.plot(sim)
+    sim.simulate(t_stop=t_vib + 20/f_vib)
+    
     return sim     
 
-def open_loop(mag_vib=1,f_vib=0.05,t_vib=np.infty):
+def open_loop(mag_vib=0.001,f_vib=0.05,t_vib=np.infty, plot_data=False):
     # https://doi.org/10.1109/JESTPE.2021.3060583
     # Model
-    start_time = helpers.find_next_zero(t_vib,f_vib)
-    pars = model_pars(mag_vib=mag_vib, f_vib=f_vib, t_vib=start_time)
+    pars = model_pars_2_2(mag_vib=mag_vib, f_vib=f_vib, t_vib=t_vib,ideal_mech=True)
+
     mdl = pars.mdl
     base = pars.base
     
     # Control
     ctrl = vhz_control.InductionMotorVHzCtrl(
-    vhz_control.InductionMotorVHzCtrlPars(
+    vhz_control.InductionMotorVHzCtrlPars(  
                                             R_s=pars.R_s,
                                             R_R=pars.R_R,
                                             L_M=pars.L_M,
@@ -198,70 +193,97 @@ def open_loop(mag_vib=1,f_vib=0.05,t_vib=np.infty):
     
     # Ramp and speed
     ctrl.w_m_ref = lambda t: (t > .2)*(.8*base.w)
-    mdl.mech.tau_L_ext = lambda t: (t > 2.5)*base.tau_nom
+    mdl.mech.tau_L_ext = lambda t: (t > 1.5)*base.tau_nom*0.8
     
     # Simulation model
-    sim = simulation.Simulation(mdl, ctrl, 1, False)
+    sim = simulation.Simulation(mdl=mdl, ctrl = ctrl, delay=1, pwm=False)
     
     # Actual simulation
-    sim.simulate(t_stop=16 + 10/f_vib)
-    # plot.plot(sim)
+    sim.simulate(t_stop=t_vib + 20/f_vib)
+    
     return sim   
     
 
-def ident(i,x,control):
+def ident(i,f_vib,control,plot_data=False):
+    t_vib = helpers.find_next_zero(12,f_vib)
 
     if control == "closed_loop":
-        sim = closed_loop(f_vib=x,t_vib=12)
+        sim = closed_loop(f_vib=f_vib, t_vib=t_vib)
     if control == "open_loop":
-        sim = open_loop(f_vib=x,t_vib=12)
-    elif control == "obs":
-        sim = obs_control(f_vib=x,t_vib=5)
+        sim = open_loop(f_vib=f_vib, t_vib=t_vib)
+    if control == "obs":
+        sim = obs_vhz(f_vib=f_vib, t_vib=t_vib)
     
     # FFT
     f, tau_yf, w_yf =helpers.torq_W_diff(sim.mdl.data.t,
-                                        sim.mdl.data.tau_M,sim.mdl.data.w_M,16,x)
-
+                                            sim.mdl.data.tau_M,
+                                            sim.mdl.data.w_M,
+                                            t_vib+13/f_vib,
+                                            f_vib)
+    if plot_data:
+        print(f,tau_yf,w_yf)
+        plot.plot(sim)
+    
     # Clean up for memomry
     del sim
     gc.collect()
     
     return [i,f,tau_yf,w_yf]
 
-def multi(control = "open_loop"):
-    folder = "mat_files/"
-    freq = np.logspace(-1,0,16)
+def multi(control = "obs"):
+    res = list()
+    # Target folder:
+    folder = "mat_files/" + "2_2kW/" +control + "/"
+    # Frequency range
+    freq = np.logspace(1,2,16)
 
-    # freq[0] = 10^(0)
-    # freq[1] = 1.02342
-    global res
+    # data collection function for async multiprocessing
+    def collect_result(result):
+        res.append(result)
+    
 
     # Multiprocessing
     pool = mp.Pool(mp.cpu_count())
     
     for i, x in enumerate(freq):
-        pool.apply_async(ident, args=[i,x,control], callback=collect_result) 
+        pool.apply_async(ident, args=[i,x,control,False], callback=collect_result) 
     
     pool.close()
     pool.join()
-    
-    # Sort the data
+
+    # sort data
     res.sort(key=lambda x: x[0])
-    f = [fre for i, fre, tau_M, w_M in res]
-    tau_M = [tau_M for i, fre, tau_M, w_M in res]
-    w_M = [w_M for i, fre, tau_M, w_M in res]
     
+    output = np.vstack(res)
+    f = np.real(output[:,1])
+    tau_M = output[:,2]
+    w_M = output[:,3]
+
     # Save data
     mdic = {"f":f,"tau_M":tau_M,"w_M":w_M}
-    io.savemat(folder + control + "_" + str(freq.size) + "_samples_" + 
-                str('%.2E' % freq[0]).replace(".","_") + "_to_" + str('%.2E' % freq[-1]).replace(".","_")  + "_Hz" +".mat", mdic)
+    io.savemat(folder + "pwm_"+
+                str(freq.size) + "_samples_" +                      # name contains sample count and frequency range
+                str('%.2E' % freq[0]).replace(".","_") +            # min freq
+                "_to_" + 
+                str('%.2E' % freq[-1]).replace(".","_") + "_Hz" +   # max freq
+                ".mat", mdic)                                       # data format
+    
+    del res
+    del output
+    gc.collect()
+
     
 if __name__ == "__main__":
     t_start = time()
-    res =[]
-    multi()
-    # ident(1,10**(1),"open_loop")
+    # multi("closed_loop")
+    # multi("obs")
+    multi("open_loop")
+    # ident(1,50,"closed_loop",True)
     print('\nExecution time: {:.2f} s'.format((time() - t_start)))
+
+    
+
+       
 
     
 

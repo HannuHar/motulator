@@ -47,9 +47,8 @@ class Mechanics:
 
         """
         if t > self.t_vib:
-            dw_M = (#tau_M - self.tau_L_ext(t) + 
-                    self.mag_vib*2*np.pi* self.f_vib*np.cos(2*np.pi* self.f_vib*t))/50
-            dtheta_M = w_M #+ self.mag_vib*np.sin(2*np.pi* self.f_vib*t)
+            dw_M = (self.mag_vib*2*np.pi* self.f_vib*np.cos(2*np.pi* self.f_vib*t))
+            dtheta_M = w_M
         else:
             dw_M = (tau_M - self.B*w_M - self.tau_L_ext(t))/self.J
             dtheta_M = w_M
